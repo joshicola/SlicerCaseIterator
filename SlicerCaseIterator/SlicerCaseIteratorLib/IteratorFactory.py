@@ -4,54 +4,88 @@ from . import IteratorBase
 from functools import wraps
 import logging
 
-def onExceptionReturnNone(func):
 
-  @wraps(func)
-  def wrapper(*args, **kwargs):
-    try:
-      return func(*args, **kwargs)
-    except (IndexError, AttributeError, KeyError) as exc:
-      logging.error(exc)
-      return None
-  return wrapper
+def onExceptionReturnNone(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (IndexError, AttributeError, KeyError) as exc:
+            logging.error(exc)
+            return None
+
+    return wrapper
 
 
 class IteratorFactory(object):
+    """Class to create iterator widgets."""
 
-  IMPLEMENTATIONS = {
-    "simple_csv_iteration": CsvTableIterator.CaseTableIteratorWidget,
-    "mask_comparison": CsvInferenceIterator.CsvInferenceIteratorWidget
-  }
+    IMPLEMENTATIONS = {
+        "simple_csv_iteration": CsvTableIterator.CaseTableIteratorWidget,
+        "mask_comparison": CsvInferenceIterator.CsvInferenceIteratorWidget,
+    }
 
-  @classmethod
-  def registerIteratorWidget(cls, name, widget):
-    if name in cls.IMPLEMENTATIONS.keys():
-      logging.warning(f"Iterator {name} is already registered")
-      return
-    if not issubclass(widget, IteratorBase.IteratorWidgetBase):
-      logging.warning(f"Widget {widget} is no subclass of IteratorBase.IteratorWidgetBase")
-      return
-    cls.IMPLEMENTATIONS[name] = widget
+    @classmethod
+    def registerIteratorWidget(cls, name, widget):
+        """Register a new instatiated widget under IMPLEMENTATIONS.
 
-  @staticmethod
-  def reloadSourceFiles():
-    packageName='SlicerCaseIteratorLib'
-    submoduleNames=['IteratorBase', 'CsvTableIterator', 'CsvInferenceIterator', 'IteratorFactory']
-    import imp
-    f, filename, description = imp.find_module(packageName)
-    package = imp.load_module(packageName, f, filename, description)
-    for submoduleName in submoduleNames:
-      f, filename, description = imp.find_module(submoduleName, package.__path__)
-      try:
-          imp.load_module(packageName+'.'+submoduleName, f, filename, description)
-      finally:
-          f.close()
+        This function would be used to dynamically create a new implementation.
 
-  @staticmethod
-  def getImplementationNames():
-    return list(IteratorFactory.IMPLEMENTATIONS.keys())
+        Args:
+            name (str): Key of IMPLEMENTATIONS.
+            widget (IteratorBase.IteratorWidgetBase): Subclass of the IteratorWidgetBase.
+        """
+        if name in cls.IMPLEMENTATIONS.keys():
+            logging.warning(f"Iterator {name} is already registered")
+            return
+        if not issubclass(widget, IteratorBase.IteratorWidgetBase):
+            logging.warning(
+                f"Widget {widget} is no subclass of IteratorBase.IteratorWidgetBase"
+            )
+            return
+        cls.IMPLEMENTATIONS[name] = widget
 
-  @staticmethod
-  @onExceptionReturnNone
-  def getIteratorWidget(mode):
-    return IteratorFactory.IMPLEMENTATIONS[mode]
+    @staticmethod
+    def reloadSourceFiles():
+        """Reload all required modules."""
+        packageName = "SlicerCaseIteratorLib"
+        submoduleNames = [
+            "IteratorBase",
+            "CsvTableIterator",
+            "CsvInferenceIterator",
+            "IteratorFactory",
+        ]
+        import imp
+
+        f, filename, description = imp.find_module(packageName)
+        package = imp.load_module(packageName, f, filename, description)
+        for submoduleName in submoduleNames:
+            f, filename, description = imp.find_module(submoduleName, package.__path__)
+            try:
+                imp.load_module(
+                    packageName + "." + submoduleName, f, filename, description
+                )
+            finally:
+                f.close()
+
+    @staticmethod
+    def getImplementationNames():
+        """Get the names of the implementations.
+
+        Returns:
+            list: List of valid implementations.
+        """
+        return list(IteratorFactory.IMPLEMENTATIONS.keys())
+
+    @staticmethod
+    @onExceptionReturnNone
+    def getIteratorWidget(mode):
+        """Get the Iterator Widget specified by "mode".
+
+        Args:
+            mode (str): The key of the Iterator Widget to retrieve.
+
+        Returns:
+            IteratorBase.IteratorWidgetBase: Instatiated subclass of IteratorWidgetBase.
+        """
+        return IteratorFactory.IMPLEMENTATIONS[mode]
