@@ -469,7 +469,7 @@ class CaseTableIteratorLogic(IteratorBase.IteratorLogicBase):
     def closeCase(self):
         """Close a case by removing the nodes and reseting values."""
         self._eventListeners.caseAboutToClose(self.parameterNode)
-        if self.parameterNode.GetParameter("CaseData"):
+        if self.parameterNode and self.parameterNode.GetParameter("CaseData") != "":
             caseData = ast.literal_eval(self.parameterNode.GetParameter("CaseData"))
 
             self.removeNodeByID(caseData["InputImage_ID"])
